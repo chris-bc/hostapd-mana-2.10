@@ -16,6 +16,7 @@
 #include "utils/edit.h"
 #include "common/version.h"
 #include "common/cli.h"
+#include "ap/ap_config.h" //MANA
 
 #ifndef CONFIG_NO_CTRL_IFACE
 
@@ -306,6 +307,97 @@ static void hostapd_cli_action_process(char *msg, size_t len)
 	hostapd_cli_exec(action_file, ctrl_ifname, pos);
 }
 
+// MANA START
+static int hostapd_cli_cmd_mana_change_ssid(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	// Max length of SSID is 32 chars + the command and the null byte
+	char buf[50];
+	if (argc < 1) {
+		printf("Invalid 'change Mana SSID' command - exactly one "
+				"argument, SSID, is required.\n");
+		return -1;
+	}
+	if (strlen(argv[0]) > SSID_MAX_LEN) {
+		printf("The max length of an SSID is %i\n", SSID_MAX_LEN);
+		return -1;
+	}
+	os_snprintf(buf, sizeof(buf), "MANA_CHANGE_SSID %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+static int hostapd_cli_cmd_mana_get_ssid(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "MANA_GET_SSID");
+}
+
+// These should be one function with a parameter
+static int hostapd_cli_cmd_mana_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_DISABLE");
+}
+static int hostapd_cli_cmd_mana_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_ENABLE");
+}
+
+static int hostapd_cli_cmd_mana_get_state(struct wpa_ctrl *ctrl, int argc, char*argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_STATE");
+}
+static into hostapd_cli_cmd_mana_loud_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "LOUD_DISABLE");
+}
+static int hostapd_cli_cmd_mana_loud_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "LOUD_ENABLE");
+}
+static int hostapd_cli_cmd_mana_get_mode(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_MODE"); //GET_LOUD_MODE mana_loud
+}
+static int hostapd_cli_cmd_mana_macacl_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANAACL_DISABLE");
+}
+static int hostapd_cli_cmd_mana_macacl_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANAACL_ENABLE");
+}
+static int hostapd_cli_cmd_mana_get_aclmode(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANAACL_MODE");
+}
+static int hostapd_cli_cmd_mana_wpe_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "WPE_DISABLE");
+}
+static int hostapd_cli_cmd_mana_wpe_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "WPE_ENABLE");
+}
+static int hostapd_cli_cmd_mana_get_wpemode(struct wpe_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "WPE_MODE");
+}
+static int hostapd_cli_cmd_mana_eapsuccess_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "EAPSUCCESS_DISABLE");
+}
+static int hostapd_cli_cmd_mana_eapsuccess_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "EAPSUCCESS_ENABLE");
+}
+static int hostapd_cli_cmd_mana_get_eapsuccess(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "EAPSUCCESS_STATE");
+}
+static int hostapd_cli_cmd_mana_eaptls_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_EAPTLS_DISABLE");
+}
+static int hostapd_cli_cmd_mana_eaptls_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_EAPTLS_ENABLE");
+}
+static int hostapd_cli_cmd_mana_get_eaptls(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "MANA_EAPTLS_STATE");
+}
+static int hostapd_cli_cmd_sycophant_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "SYCOPHANT_DISABLE");
+}
+static int hostapd_cli_cmd_sycophant_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "SYCOPHANT_ENABLE");
+}
+static int hostapd_cli_cmd_sycophant_get_state(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+	return wpa_ctrl_command(ctrl, "SYCOPHANT_STATE");
+}
+// END MANA
 
 static int hostapd_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
@@ -1744,6 +1836,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "driver", hostapd_cli_cmd_driver, NULL,
 	  "<driver sub command> [<hex formatted data>] = send driver command data" },
 #endif /* ANDROID */
+	// MANA START
+	
 	{ NULL, NULL, NULL, NULL }
 };
 
