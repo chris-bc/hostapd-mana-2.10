@@ -1837,7 +1837,30 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "<driver sub command> [<hex formatted data>] = send driver command data" },
 #endif /* ANDROID */
 	// MANA START
-	
+	{ "?", hostapd_cli_cmd_help, NULL, NULL }, //One of digininja's original changes :)
+	{ "mana_change_ssid", hostapd_cli_cmd_mana_change_ssid, NULL, "= change the default SSID for whene mana is off" },
+	{ "mana_get_ssid", hostapd_cli_cmd_mana_get_ssid, NULL, "= get the default SSID for when mana is off" },
+	{ "mana_get_state", hostapd_cli_cmd_mana_get_state, NULL, "= get whether mana is enabled or not" },
+	{ "mana_disable", hostapd_cli_cmd_mana_disable, NULL, "= disable mana" },
+	{ "mana_enable", hostapd_cli_cmd_mana_enable, NULL, "= enable mana" },
+	{ "mana_loud_off", hostapd_cli_cmd_mana_loud_disable, NULL, "=disable mana's loud mode" },
+	{ "mana_loud_on", hostapd_cli_cmd_mana_loud_enable, NULL, "= enable mana's loud mode" },
+	{ "mana_loud_state", hostapd_cli_cmd_mana_get_mode, NULL, "= check mana's loud mode" },
+	{ "mana_macacl_off", hostapd_cli_cmd_mana_macacl_disable, NULL, "= disable MAC ACLs at management frame level" },
+	{ "mana_macacl_on", hostapd_cli_cmd_mana_macacl_enable, NULL, "= enable MAC ACLs at management frame level" },
+	{ "mana_macacl_state", hostapd_cli_cmd_mana_get_aclmode, NULL, "= check ana's MAC ACL mode" },
+	{ "mana_wpe_off" hostapd_cli_cmd_mana_wpe_disable, NULL, "= disable mana's wpe mode" },
+	{ "mana_wpe_on", hostapd_cli_cmd_mana_wpe_enable, NULL, "= enable mana's wpe mode" },
+	{ "mana_wpe_state", hostapd_cli_cmd_mana_get_wpemode, NULL, "= check mana's wpe mode" },
+	{ "mana_eapsuccess_off", hostapd_cli_cmd_mana_eapsuccess_disable, NULL, "= disable mana's eapsuccess mode" },
+	{ "mana_eapsuccess_on", hostapd_cli_cmd_mana_eapsuccess_enable, NULL, "= enable mana's eapsuccess mode" },
+	{ "mana_eapsuccess_state", hostapd_cli_cmd_mana_get_eapsuccess, NULL, "= check mana's eapsuccess mode" },
+	{ "mana_eaptls_off", hostapd_cli_cmd_mana_eaptls_disable, NULL, "= disable mana's eaptls mode" },
+	{ "mana_eaptls_on", hostapd_cli_cmd_mana_eaptls_enable, NULL, "= enable mana's eaptls mode" },
+	{ "sycophant_get_state", hostapd_cli_cmd_sycophant_get_state, NULL, "= get whether sycophant is enabled or not" },
+	{ "sycohant_disable", hostapd_cli_cmd_sycophant_disable, NULL, "= disable sycophant" },
+	{ "sycophant_enable", hostapd_cli_cmd_sycophant_enable, NULL, "= enable sycophant" },
+	// END MANA
 	{ NULL, NULL, NULL, NULL }
 };
 
