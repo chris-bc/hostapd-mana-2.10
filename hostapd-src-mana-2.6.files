@@ -1,4 +1,3 @@
-hostapd-2.6/src/eap_server/eap.h
 hostapd-2.6/src/eap_server/eap_server.c
 hostapd-2.6/src/eap_server/eap_server_fast.c
 hostapd-2.6/src/eap_server/eap_server_gtc.c
