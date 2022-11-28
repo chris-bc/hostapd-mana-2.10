@@ -22,3 +22,6 @@ int retrieve_sta_taxonomy(const struct hostapd_data *hapd,
 			  struct sta_info *sta, char *buf, size_t buflen);
 
 #endif /* TAXONOMY_H */
+
+int retrieve_hostapd_sta_taxonomy(const struct hostapd_data *hapd, //MANA
+				struct hostapd_sta_info *info, char *buf, size_t buflen); //MANA
