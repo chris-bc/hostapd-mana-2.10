@@ -32,6 +32,12 @@
 #include "dfs.h"
 #include "taxonomy.h"
 #include "ieee802_11_auth.h"
+// MANA START
+#include "common/mana.h" //MANA
+
+struct mana_mac *mana_machash = NULL;
+struct mana_ssid *mana_ssidhash = NULL;
+// MANA END
 
 
 #ifdef NEED_AP_MLME
@@ -62,6 +68,43 @@ static u8 * hostapd_eid_bss_load(struct hostapd_data *hapd, u8 *eid, size_t len)
 	return eid;
 }
 
+//Start MANA
+//Log output of observed MACs & SSIDs
+static void log_ssid(struct hostapd_data *hapd, const u8 *ssid, size_t ssid_len, const u8 *mac) {
+	if (os_strcmp("NOT_SET", hapd->iconf->mana_outfile) == 0) {
+		return; // File not set, so don't log
+	}
+	FILE *f = fopen(hapd->iconf->mana_outfile, "a");
+	if (f != NULL) {
+		int rand=0;
+		if (mac[0] & 2) //Check if locally administered aka random MAC
+			rand=1;
+
+#ifdef CONFIG_TAXONOMY
+		struct sta_info *sta;
+		struct hostapd_sta_info *info;
+		if ((sta = ap_get_sta(hapd, mac)) != NULL) {
+			char reply[512] = "";
+			size_t reply_len = 512;
+			retrieve_sta_taxonomy(hapd, sta, reply, reply_len);
+			fprintf(f,MACSTR ", %s, %d, %s\n", MAC2STR(mac), wpa_ssid_txt(ssid, ssid_len), rand, reply);
+		} else if ((info = sta_track_get(hapd->iface, mac)) != NULL) {
+			char reply[512] = "";
+			size_t reply_len = 512;
+			retrieve_hostapd_sta_taxonomy(hapd, info, reply, reply_len);
+			fprintf(f,MACSTR ", %s, %d, %s\n", MAC2STR(mac), wpa_ssid_txt(ssid, ssid_len), rand, reply);
+		} else {
+			fprintf(f,MACSTR ", %s, %d\n", MAC2STR(mac), wpa_ssid_txt(ssid,ssid_len), rand);
+		}
+#endif /* CONFIG_TAXONOMY */
+#ifndef CONFIG_TAXONOMY
+		fprintf(f,MACSTR ", %s, %d\n", MAC2STR(mac), wpa_ssid_txt(ssid, ssid_len), rand);
+#endif /* CONFIG_TAXONOMY */
+		fclose(f);
+	} else
+		wpa_printf(MSG_ERROR, "MANA: Error writing to activity file %s", hapd->iconf->mana_outfile);
+}
+//End MANA
 
 static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
 {
@@ -429,6 +472,7 @@ static u8 * hostapd_eid_supported_op_classes(struct hostapd_data *hapd, u8 *eid)
 
 
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
+				   const u8 *ssid, size_t ssid_len, //MANA
 				   const struct ieee80211_mgmt *req,
 				   int is_p2p, size_t *resp_len)
 {
@@ -482,6 +526,26 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	resp->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					   WLAN_FC_STYPE_PROBE_RESP);
+
+	//MANA - check against macacl
+	if (req && hapd->iconf->mana_macacl) {
+		int match;
+		if (hapd->iconf->bss[0]->macaddr_acl == DENY_UNLESS_ACCEPTED) {
+			match = hostapd_maclist_found(hapd->conf->accept_mac, hapd->conf->num_accept_mac, req->sa, NULL);
+			if (!match) {
+				wpa_printf(MSG_DEBUG, "MANA: Station MAC is not authorised by accept ACL: " MACSTR, MAC2STR(req->sa));
+				return NULL; //MAC is not in accept list, back out and don't send
+			}
+		} else if (hapd->iconf->bss[0]->macaddr_acl == ACCEPT_UNLESS_DENIED) {
+			if (hostapd_maclist_found(hapd->conf->deny_mac, hapd->conf->num_deny_mac, req->sa, NULL)) {
+				wpa_printf(MSG_DEBUG, "MANA: Station MAC is not authorised by deny ACL: " MACSTR, MAC2STR(req->sa));
+				return NULL; //MAC is in deny list, back out and don't send
+			}
+		}
+		wpa_printf(MSG_INFO, "MANA: Station MAC is authorised by ACL: " MACSTR, MAC2STR(req->sa));
+	}
+	//MANA END
+
 	if (req)
 		os_memcpy(resp->da, req->sa, ETH_ALEN);
 	os_memcpy(resp->sa, hapd->own_addr, ETH_ALEN);
@@ -496,9 +560,20 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	pos = resp->u.probe_resp.variable;
 	*pos++ = WLAN_EID_SSID;
-	*pos++ = hapd->conf->ssid.ssid_len;
-	os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
-	pos += hapd->conf->ssid.ssid_len;
+	//*pos++ = hapd->conf->ssid.ssid_len;
+	//os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
+	//pos += hapd->conf->ssid.ssid_len;
+	// MANA START
+	if (hapd->iconf->enable_mana && ssid_len > 0) {
+		*pos++ = ssid_len;
+		os_memcpy(pos, ssid, ssid_len);
+		pos += ssid_len;
+	} else {
+		*pos++ = hapd->conf->ssid.ssid_len;
+		os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
+		pos += hapd->conf->ssid.ssid_len;
+	}
+	// MANA END
 
 	/* Supported rates */
 	pos = hostapd_eid_supp_rates(hapd, pos);
@@ -747,7 +822,8 @@ void sta_track_expire(struct hostapd_iface *iface, int force)
 }
 
 
-static struct hostapd_sta_info * sta_track_get(struct hostapd_iface *iface,
+//static struct hostapd_sta_info * sta_track_get(struct hostapd_iface *iface, //MANA
+struct hostapd_sta_info * sta_track_get(struct hostapd_iface *iface,
 					       const u8 *addr)
 {
 	struct hostapd_sta_info *info;
@@ -852,6 +928,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	u16 csa_offs[2];
 	size_t csa_offs_len;
 	struct radius_sta rad_info;
+	int iterate = 0; //MANA
 
 	if (hapd->iconf->rssi_ignore_probe_request && ssi_signal &&
 	    ssi_signal < hapd->iconf->rssi_ignore_probe_request)
@@ -942,9 +1019,15 @@ void handle_probe_req(struct hostapd_data *hapd,
 		wpabuf_free(p2p);
 	}
 #endif /* CONFIG_P2P */
+	if (os_strcmp(hapd->iconf->mana_ssid_filter_file,"NOT_SET") && elems.ssid_len != 0) { //MANA
+												if (!hostapd_ssidlist_found(hapd->conf->ssid_filter, hapd->conf->num_ssid_filter, wpa_ssid_txt(elems.ssid, elems.ssid_len))) {
+													wpa_printf(MSG_DEBUG, "MANA - SSID '%s' not found in list.", wpa_ssid_txt(elems.ssid, elems.ssid_len));
+													return;
+												}
+											}
 
 	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0 &&
-	    elems.ssid_list_len == 0 && elems.short_ssid_list_len == 0) {
+	    elems.ssid_list_len == 0 && !hapd->iconf->enable_mana) { //MANA
 		wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR " for "
 			   "broadcast SSID ignored", MAC2STR(mgmt->sa));
 		return;
@@ -961,18 +1044,30 @@ void handle_probe_req(struct hostapd_data *hapd,
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_TAXONOMY
-	{
+	
 		struct sta_info *sta;
 		struct hostapd_sta_info *info;
 
 		if ((sta = ap_get_sta(hapd, mgmt->sa)) != NULL) {
 			taxonomy_sta_info_probe_req(hapd, sta, ie, ie_len);
+			//START MANA - JUST CHECK TAXONOMY IN OUTPUT
+			char reply[512] = "";
+			size_t reply_len = 512;
+			retrieve_sta_taxonomy(hapd, sta, reply, reply_len);
+			wpa_printf(MSG_MSGDUMP, "MANA TAXONOMY STA '%s'", reply);
+			//END MANA
 		} else if ((info = sta_track_get(hapd->iface,
 						 mgmt->sa)) != NULL) {
 			taxonomy_hostapd_sta_info_probe_req(hapd, info,
 							    ie, ie_len);
+			//START MANA - JUST CHECK TAXONOMY IN OUTPUT
+			char reply[512] = "";
+			size_t reply_len = 512;
+			retrieve_hostapd_sta_taxonomy(hapd, info, reply, reply_len);
+			wpa_printf(MSG_MSGDUMP, "MANA TAXONOMY STA '%s'", reply);
+			//END MANA
 		}
-	}
+	
 #endif /* CONFIG_TAXONOMY */
 
 	res = ssid_match(hapd, elems.ssid, elems.ssid_len,
