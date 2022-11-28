@@ -1073,7 +1073,10 @@ void handle_probe_req(struct hostapd_data *hapd,
 	res = ssid_match(hapd, elems.ssid, elems.ssid_len,
 			 elems.ssid_list, elems.ssid_list_len,
 			 elems.short_ssid_list, elems.short_ssid_list_len);
-	if (res == NO_SSID_MATCH) {
+	//MANA START
+	// todo handle ssid_list see ssid_match for code
+	// todo change emit code below (global flag?)
+	if (!hapd->iconf->enable_mana && res == NO_SSID_MATCH) {
 		if (!(mgmt->da[0] & 0x01)) {
 			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
 				   " for foreign SSID '%s' (DA " MACSTR ")%s",
@@ -1083,7 +1086,49 @@ void handle_probe_req(struct hostapd_data *hapd,
 				   elems.ssid_list ? " (SSID list)" : "");
 		}
 		return;
+	} else if (hapd->iconf->enable_mana) {
+		if (res == WILDCARD_SSID_MATCH) {
+			//Broadcast probe no need to record SSID or STA
+			wpa_printf(MSG_DEBUG, "MANA - Broadcast probe request from " MACSTR "",MAC2STR(mgmt->sa));
+			iterate = 1; //iterate through hash emitting multiple probe responses
+			log_ssid(hapd, (const u8 *)"<Broadcast>", 11, mgmt->sa);
+		} else {
+			//Directed probe
+			struct mana_ssid *newssid = NULL;
+			struct mana_mac *newsta = NULL;
+			if (hapd->iconf->mana_loud) {
+				// Loud mode check ssidhash
+				HASH_FIND_STR(mana_ssidhash, wpa_ssid_txt(elems.ssid, elems.ssid_len), newssid);
+			} else {
+				// Not loud mode, check if the STA probing is in our hash
+				HASH_FIND(hh,mana_machash, mgmt->sa, 6, newsta);
+				if (newsta == NULL) { //STA MAC not seen before adding to hash
+					wpa_printf(MSG_DEBUG, "MANA - Adding STA " MACSTR " to the hash.", MAC2STR(mgmt->sa));
+					newsta = (struct mana_mac*)os_malloc(sizeof(struct mana_mac));
+					os_memcpy(newsta->sta_addr, mgmt->sa, ETH_ALEN);
+					newsta->ssids = NULL;
+					HASH_ADD(hh,mana_machash, sta_addr, 6, newsta);
+				}
+				HASH_FIND_STR(newsta->ssids, wpa_ssid_txt(elems.ssid, elems.ssid_len), newssid);
+			}
+
+			if (newssid == NULL) {
+				//Probed for SSID not found (and not Broadcast) add SSID to hash
+				wpa_printf(MSG_DEBUG, "MANA - Adding SSID %s(%d) from STA " MACSTR " to the hash.", wpa_ssid_txt(elems.ssid, elems.ssid_len), elems.ssid_len, MAC2STR(mgmt->sa));
+				struct mana_ssid *newssid = os_malloc(sizeof(struct mana_ssid));
+				os_memcpy(newssid->ssid_txt, wpa_ssid_txt(elems.ssid, elems.ssid_len), elems.ssid_len+1);
+				os_memcpy(newssid->ssid, elems.ssid, elems.ssid_len);
+				newssid->ssid_len = elems.ssid_len;
+				if (hapd->iconf->mana_loud)
+					HASH_ADD_STR(mana_ssidhash, ssid_txt, newssid);
+				else
+					HASH_ADD_STR(newsta->ssids, ssid_txt, newssid);
+			}
+			wpa_printf(MSG_INFO, "MANA - Directed probe request for SSID '%s' from " MACSTR "",wpa_ssid_txt(elems.ssid, elems.ssid_len),MAC2STR(mgmt->sa));
+			log_ssid(hapd, elems.ssid, elems.ssid_len, mgmt->sa);
+		}
 	}
+	//MANA END
 
 	if (hapd->conf->ignore_broadcast_ssid && res == WILDCARD_SSID_MATCH) {
 		wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR " for "
@@ -1169,45 +1214,52 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
+	// CBC TODO: What's this? Not in diff?
 	wpa_msg_ctrl(hapd->msg_ctx, MSG_INFO, RX_PROBE_REQUEST "sa=" MACSTR
 		     " signal=%d", MAC2STR(mgmt->sa), ssi_signal);
 
-	resp = hostapd_gen_probe_resp(hapd, mgmt, elems.p2p != NULL,
-				      &resp_len);
-	if (resp == NULL)
-		return;
+	//MANA Start - this is just the same original code repeated twice, except MANA has a hash iterator around it
+	if (!iterate) { //MANA Either we're not in mana or it's not a broadcast probe
+		if (!hapd->iconf->enable_mana) //MANA if *not* mana, respond with the proper ssid
+			resp = hostapd_gen_probe_resp(hapd, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len, mgmt, elems.p2p != NULL, &resp_len);
+		else {
+			wpa_printf(MSG_DEBUG, "MANA - Attempting to generate response : %.*s (%d) for STA " MACSTR, elems.ssid_len, elems.ssid, elems.ssid_len, MAC2STR(mgmt->sa));
+			resp = hostapd_gen_probe_resp(hapd, elems.ssid, elems.ssid_len, mgmt, elems.p2p != NULL, &resp_len);
+		}
+		if (resp == NULL)
+			return;
 
-	/*
-	 * If this is a broadcast probe request, apply no ack policy to avoid
-	 * excessive retries.
-	 */
-	noack = !!(res == WILDCARD_SSID_MATCH &&
-		   is_broadcast_ether_addr(mgmt->da));
+		/*
+	 	* If this is a broadcast probe request, apply no ack policy to avoid
+	 	* excessive retries.
+	 	*/
+		noack = !!(res == WILDCARD_SSID_MATCH &&
+		   	is_broadcast_ether_addr(mgmt->da));
 
-	csa_offs_len = 0;
-	if (hapd->csa_in_progress) {
-		if (hapd->cs_c_off_proberesp)
-			csa_offs[csa_offs_len++] =
-				hapd->cs_c_off_proberesp;
+		csa_offs_len = 0;
+		if (hapd->csa_in_progress) {
+			if (hapd->cs_c_off_proberesp)
+				csa_offs[csa_offs_len++] =
+					hapd->cs_c_off_proberesp;
 
-		if (hapd->cs_c_off_ecsa_proberesp)
-			csa_offs[csa_offs_len++] =
-				hapd->cs_c_off_ecsa_proberesp;
+			if (hapd->cs_c_off_ecsa_proberesp)
+				csa_offs[csa_offs_len++] =
+					hapd->cs_c_off_ecsa_proberesp;
+		}
+
+		ret = hostapd_drv_send_mlme(hapd, resp, resp_len, noack,
+					    csa_offs_len ? csa_offs : NULL,
+					    csa_offs_len, 0);
+
+		if (ret < 0)
+			wpa_printf(MSG_INFO, "handle_probe_req: send failed");
+
+		os_free(resp);
+
+		wpa_printf(MSG_EXCESSIVE, "STA " MACSTR " sent probe request for %s "
+		   	"SSID", MAC2STR(mgmt->sa),
+		   	elems.ssid_len == 0 ? "broadcast" : "our");
 	}
-
-	ret = hostapd_drv_send_mlme(hapd, resp, resp_len, noack,
-				    csa_offs_len ? csa_offs : NULL,
-				    csa_offs_len, 0);
-
-	if (ret < 0)
-		wpa_printf(MSG_INFO, "handle_probe_req: send failed");
-
-	os_free(resp);
-
-	wpa_printf(MSG_EXCESSIVE, "STA " MACSTR " sent probe request for %s "
-		   "SSID", MAC2STR(mgmt->sa),
-		   elems.ssid_len == 0 ? "broadcast" : "our");
-}
 
 
 static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
