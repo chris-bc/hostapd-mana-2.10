@@ -1,4 +1,3 @@
-hostapd-2.6/src/crypto/tls_openssl.c
 hostapd-2.6/src/crypto/tls_schannel.c
 hostapd-2.6/src/drivers/driver_madwifi.c
 hostapd-2.6/src/drivers/driver_test.c
