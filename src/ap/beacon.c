@@ -1259,7 +1259,58 @@ void handle_probe_req(struct hostapd_data *hapd,
 		wpa_printf(MSG_EXCESSIVE, "STA " MACSTR " sent probe request for %s "
 		   	"SSID", MAC2STR(mgmt->sa),
 		   	elems.ssid_len == 0 ? "broadcast" : "our");
-	}
+	} else {
+		//MANA iterate
+		struct mana_ssid *khash;
+		struct mana_ssid *k;
+		struct mana_mac *newsta = NULL;
+
+		// Select appropriate hash to iterate
+		if (hapd->iconf->mana_loud)
+			khash = mana_ssidhash;
+		else {
+			// Find specific MAC's SSID hash
+			HASH_FIND(hh, mana_machash, mgmt->sa, 6, newsta);
+			if (newsta == NULL)
+				return;
+			khash = newsta->ssids;
+		}
+		for ( k = khash; k != NULL; k = (struct mana_ssid*)(k->hh.next)) {
+			wpa_printf(MSG_DEBUG, "MANA: Generating Broadcast response : %s (%zu) for STA " MACSTR, k->ssid_txt, k->ssid_len, MAC2STR(mgmt->sa));
+			resp = hostapd_gen_probe_resp(hapd, k->ssid, k->ssid_len, mgmt, elems.p2p != NULL, &resp_len);
+			if (resp == NULL)
+				return;
+
+			/*
+			 * If this is a broadcast probe request, apply no ack policy to avoid
+			 * excessive retries.
+			 */
+			 noack = !!(res == WILDCARD_SSID_MATCH &&
+				 is_broadcast_ether_addr(mgmt->da));
+
+			 csa_offs_len = 0;
+			 if (hapd->csa_in_progress) {
+				 if (hapd->cs_c_off_proberesp)
+					 csa_offs[csa_offs_len++] =
+						 hapd->cs_c_off_proberesp;
+
+				 if (hapd->cs_c_off_ecsa_proberesep)
+					 csa_offs[csa_offs_len++] =
+						 hapd->cs_c_off_ecsa_proberesp;
+			}
+
+			ret = hostapd_drv_send_mlme_csa(hapd, resp, resp_len, noack,
+							csa_offs_len ? csa_offs : NULL,
+							csa_offs_len);
+			if (ret < 0)
+				wpa_printf(MSG_ERROR, "handle_probe_req: send failed");
+			os_free(resp);
+
+			wpa_printf(MSG_EXCESSIVE, "MANA: STA " MACSTR " sent probe request for %s "
+					"SSID", MAC2STR(mgmt->sa), k->ssid);
+		} //for
+	} //MANA iterate END
+}
 
 
 static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
@@ -1294,7 +1345,8 @@ static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
 			   "this");
 
 	/* Generate a Probe Response template for the non-P2P case */
-	return hostapd_gen_probe_resp(hapd, NULL, 0, resp_len);
+	//return hostapd_gen_probe_resp(hapd, NULL, 0, resp_len);
+	return hostapd_gen_probe_resp(hapd, NULL, 0, NULL, 0, resp_len); //MANA
 }
 
 #endif /* NEED_AP_MLME */
@@ -2001,7 +2053,8 @@ static int __ieee802_11_set_beacon(struct hostapd_data *hapd)
 		params.freq = &freq;
 
 	res = hostapd_drv_set_ap(hapd, &params);
-	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);
+	// MANA - Start beacon stuff here
+	//hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);
 	if (res)
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 	else
