@@ -1137,8 +1137,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 				fwrite(key->key_id,8,1,hccapx);
 				for (i=0;i<16;i++)
 					fwrite("\x00",1,1,hccapx);
-				fwrite(key->key_data_length,2,1,hccapx);
-				fwrite(key+1,WPA_GET_BE16(key->key_data_length),1,hccapx);
+				fwrite(key->key_length,2,1,hccapx);
+				fwrite(key+1,WPA_GET_BE16(key->key_length),1,hccapx);
 			}
 			// Padding
 			for (i=0;i<(256 - sizeof(*hdr) - ntohs(hdr->length) - (mic_len == 24 ? 8 : 0));i++) {

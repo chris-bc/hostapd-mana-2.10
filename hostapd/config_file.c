@@ -168,7 +168,7 @@ static int hostapd_config_read_ssidlist(const char *fname,
 		}
 
 		*ssid_filter = new_ssid_filter;
-		os_memcpy((*ssid_filter)[*num].ssid, pos, stnlen(pos, SSID_MAX_LEN));
+		os_memcpy((*ssid_filter)[*num].ssid, pos, strnlen(pos, SSID_MAX_LEN));
 		(*num)++;
 		wpa_printf(MSG_INFO, "SSID: '%s' added.", pos);
 	}
@@ -187,7 +187,7 @@ int hostapd_acl_comp(const void *a, const void *b)
 
 
 int hostapd_add_acl_maclist(struct mac_acl_entry **acl, int *num,
-			    int vlan_id, const u8 *addr)
+			    int vlan_id, const u8 *addr, const u8 *mask)
 {
 	struct mac_acl_entry *newacl;
 
@@ -198,8 +198,7 @@ int hostapd_add_acl_maclist(struct mac_acl_entry **acl, int *num,
 	}
 
 	*acl = newacl;
-	//os_memcpy((*acl)[*num].addr, addr, ETH_ALEN);
-	os_memcpy((*acl)[*num].addr, transform, ETH_ALEN); //MANA
+	os_memcpy((*acl)[*num].addr, addr, ETH_ALEN);
 	os_memcpy((*acl)[*num].mask, mask, ETH_ALEN); //MANA
 	os_memset(&(*acl)[*num].vlan_id, 0, sizeof((*acl)[*num].vlan_id));
 	(*acl)[*num].vlan_id.untagged = vlan_id;
@@ -244,6 +243,7 @@ static int hostapd_config_read_maclist(const char *fname,
 		return -1;
 	}
 
+	int i;
 	while (fgets(buf, sizeof(buf), f)) {
 		int rem = 0;
 
@@ -290,6 +290,15 @@ static int hostapd_config_read_maclist(const char *fname,
 				vlan_id = atoi(pos);
 				vlanflag = 1;
 			}
+		}
+		
+		//MANA Start - parse MAC mask
+		lastpos = pos;
+		while (*pos != '\0') {
+			if (*pos == '\n') {
+				*pos = '\0';
+				break;
+			}
 			pos++;
 		}
 		pos = lastpos;
@@ -316,7 +325,7 @@ static int hostapd_config_read_maclist(const char *fname,
 			}
 			//MANA End
 
-		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr) < 0) {
+		if (hostapd_add_acl_maclist(acl, num, vlan_id, transform,mask) < 0) {
 			fclose(f);
 			return -1;
 		}
@@ -2507,12 +2516,12 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "mana_macacl") == 0) {
 		int val = atoi(pos);
 		conf->mana_macacl = (val != 0);
-		if (conf->mana_acl) {
+		if (conf->mana_macacl) {
 			wpa_printf(MSG_DEBUG, "MANA: MAC ACLs extended to management frames");
 		}
 	} else if (os_strcmp(buf, "mana_outfile") == 0) {
 		char *tmp = malloc(strlen(pos));
-		strcpp(tmp,pos);
+		strcpy(tmp,pos);
 		FILE *f = fopen(pos, "a");
 		if (!f) {
 			wpa_printf(MSG_ERROR, "MANA: Line %d: Failed to open activity file '%s'", line, pos);
@@ -2559,7 +2568,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 		fclose(f);
 		conf->mana_wpaout = tmp2;
-		wpa_printf(MSG_INFO, "MANA: Captured WPA/2 handshake will be written to file '%s'."conf->mana_wpaout);
+		wpa_printf(MSG_INFO, "MANA: Captured WPA/2 handshake will be written to file '%s'.",conf->mana_wpaout);
 	} else if (os_strcmp(buf, "mana_eapsuccess") == 0) {
 		int val = atoi(pos);
 		conf->mana_eapsuccess = (val != 0);
