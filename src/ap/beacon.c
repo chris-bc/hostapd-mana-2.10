@@ -1300,8 +1300,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 			}
 
 			ret = hostapd_drv_send_mlme(hapd, resp, resp_len, noack,
-							csa_offs_len ? csa_offs : NULL,
-							csa_offs_len);
+						csa_offs_len ? csa_offs : NULL,
+						csa_offs_len, 0);
 			if (ret < 0)
 				wpa_printf(MSG_ERROR, "handle_probe_req: send failed");
 			os_free(resp);
