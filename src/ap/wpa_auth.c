@@ -1101,7 +1101,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			fwrite(&wpa_auth->conf.ssid_len,1,1,hccapx);
 			fwrite(wpa_auth->conf.ssid,32,1,hccapx);
 			fwrite(&key->type,1,1,hccapx);
-			fwrite(mic_len == 24 ? key192->key_mic : key->key_mic,16,1,hccapx); //hashcat truncates to 16
+			fwrite(mic_len == 24 ? mic : mic,16,1,hccapx); //hashcat truncates to 16
 			fwrite(sm->wpa_auth->addr,ETH_ALEN,1,hccapx);
 			fwrite(sm->ANonce,WPA_NONCE_LEN,1,hccapx);
 			fwrite(sm->addr,ETH_ALEN,1,hccapx);
@@ -1114,18 +1114,18 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			// unrelated functions. This, while long, explains the contents better.
 			int i;
 			if (mic_len == 24) {
-				fwrite(&key192->type,1,1,hccapx);
-				fwrite(key192->key_info,2,1,hccapx);
-				fwrite(key192->key_length,2,1,hccapx);
-				fwrite(key192->replay_counter,WPA_REPLAY_COUNTER_LEN,1,hccapx);
-				fwrite(key192->key_nonce,WPA_NONCE_LEN,1,hccapx);
-				fwrite(key192->key_iv,16,1,hccapx);
-				fwrite(key192->key_rsc,WPA_KEY_RSC_LEN,1,hccapx);
-				fwrite(key192->key_id,8,1,hccapx);
+				fwrite(&key->type,1,1,hccapx);
+				fwrite(key->key_info,2,1,hccapx);
+				fwrite(key->key_length,2,1,hccapx);
+				fwrite(key->replay_counter,WPA_REPLAY_COUNTER_LEN,1,hccapx);
+				fwrite(key->key_nonce,WPA_NONCE_LEN,1,hccapx);
+				fwrite(key->key_iv,16,1,hccapx);
+				fwrite(key->key_rsc,WPA_KEY_RSC_LEN,1,hccapx);
+				fwrite(key->key_id,8,1,hccapx);
 				for (i=0;i<16;i++) //hccapx truncates to 16
 					fwrite("\x00",1,1,hccapx);
-				fwrite(key192->key_data_length,2,1,hccapx);
-				fwrite(key192+1,WPA_GET_BE16(key192->key_data_length),1,hccapx);
+				fwrite(&key_data_length,2,1,hccapx);
+				fwrite(key+1,key_data_length,1,hccapx);
 			} else {
 				fwrite(&key->type,1,1,hccapx);
 				fwrite(key->key_info,2,1,hccapx);
