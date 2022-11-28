@@ -136,7 +136,7 @@ static struct wpabuf * eap_mschapv2_build_challenge(
 		wpa_printf(MSG_DEBUG, "SYCOPHANT: Checking Sycophant State File.");
 
 		while (os_strcmp(sup_state,"C") != 0) {
-			sycophantState = fopen(sycophantStateFlie,"rb");
+			sycophantState = fopen(sycophantStateFile,"rb");
 			if (sycophantState == NULL) {
 				wpa_printf(MSG_ERROR,"SYCOPHANT: Unable to open state file %s, not relaying",sycophantStateFile);
 				break;
@@ -366,7 +366,7 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 		char sycophantStateFile[sizeof(mana.conf->sycophant_dir)+16];
 		os_strlcpy(sycophantStateFile,mana.conf->sycophant_dir,sizeof(mana.conf->sycophant_dir));
 		strcat(sycophantStateFile,"SYCOPHANT_STATE");
-		sycophantState = fopen(sycophantStateFlie, "rb");
+		sycophantState = fopen(sycophantStateFile, "rb");
 
 		if (sycophantState != NULL) {
 			wpa_printf(MSG_DEBUG, "SYCOPHANT: Checking state file.");
@@ -464,7 +464,7 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 	}
 
 //MANA Start
-	if (mana.conf->mana.wpe) {
+	if (mana.conf->mana_wpe) {
 		u8 challenge[8];
 
 		if (challenge_hash(peer_challenge, data->auth_challenge,

@@ -145,7 +145,7 @@ static int hostapd_ctrl_iface_mana_change_ssid (struct hostapd_data *hapd,
 	hapd->conf->ssid.ssid_len = strlen(ssid);
 	// Not sure if the +1 is needed here or not
 	os_memcpy(hapd->conf->ssid.ssid, ssid, strlen(ssid) + 1);
-	ieee801_11_set_beacon(hapd);
+	ieee802_11_set_beacon(hapd);
 	wpa_printf(MSG_DEBUG, "MANA CTRL_IFACE DEFAULT SSID CHANGED");
 	return 0;
 }
@@ -3587,7 +3587,7 @@ static int hostapd_ctrl_iface_acl_add_mac(struct mac_acl_entry **acl, int *num,
 		vlanid = atoi(pos + 8);
 
 	if (!hostapd_maclist_found(*acl, *num, addr, &vlan_id)) {
-		ret = hostapd_add_acl_maclist(acl, num, vlanid, addr);
+		ret = hostapd_add_acl_maclist(acl, num, vlanid, addr, 0);
 		if (ret != -1 && *acl)
 			qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
 	}
@@ -4175,7 +4175,7 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 			os_memcpy(reply, "CHANGED\n", 8);
 			reply_len = 8;
 		}
-	} else if (os_strcp(buf, "MANA_DISABLE") == 0) {
+	} else if (os_strcmp(buf, "MANA_DISABLE") == 0) {
 		if (hostapd_ctrl_iface_mana_enable_disable(hapd, 0))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "MANA_ENABLE") == 0) {
@@ -4253,7 +4253,7 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "MANA_EAPTLS_MODE") == 0) {
 		if (hostapd_ctrl_iface_mana_get_eaptlsmode(hapd)) {
-			os_memcpy(reply, MANA EAPTLS MODE ENABLED\n", 25);
+			os_memcpy(reply, "MANA EAPTLS MODE ENABLED\n", 25);
 			reply_len = 25;
 		} else {
 			os_memcpy(reply, "MANA EAPTLS MODE DISABLED\n", 26);

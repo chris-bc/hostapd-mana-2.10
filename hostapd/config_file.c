@@ -199,7 +199,8 @@ int hostapd_add_acl_maclist(struct mac_acl_entry **acl, int *num,
 
 	*acl = newacl;
 	os_memcpy((*acl)[*num].addr, addr, ETH_ALEN);
-	os_memcpy((*acl)[*num].mask, mask, ETH_ALEN); //MANA
+	if (&mask != 0)
+		os_memcpy((*acl)[*num].mask, mask, ETH_ALEN); //MANA
 	os_memset(&(*acl)[*num].vlan_id, 0, sizeof((*acl)[*num].vlan_id));
 	(*acl)[*num].vlan_id.untagged = vlan_id;
 	(*acl)[*num].vlan_id.notempty = !!vlan_id;
@@ -233,7 +234,7 @@ static int hostapd_config_read_maclist(const char *fname,
 	int line = 0;
 	u8 addr[ETH_ALEN];
 	u8 mask[ETH_ALEN], transform[ETH_ALEN]; //MANA
-	int vlan_id;
+	int vlan_id = 0;
 	int vlanflag = 0; //MANA
 	char *lastpos; //MANA
 

@@ -10,7 +10,7 @@
 
 #include "common.h"
 #include "eap_i.h"
-#include "commen/mana.h" //MANA
+#include "common/mana.h" //MANA
 
 
 struct eap_gtc_data {

@@ -343,7 +343,7 @@ static int hostapd_cli_cmd_mana_enable(struct wpa_ctrl *ctrl, int argc, char *ar
 static int hostapd_cli_cmd_mana_get_state(struct wpa_ctrl *ctrl, int argc, char*argv[]) {
 	return wpa_ctrl_command(ctrl, "MANA_STATE");
 }
-static into hostapd_cli_cmd_mana_loud_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
+static int hostapd_cli_cmd_mana_loud_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
 	return wpa_ctrl_command(ctrl, "LOUD_DISABLE");
 }
 static int hostapd_cli_cmd_mana_loud_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
@@ -367,7 +367,7 @@ static int hostapd_cli_cmd_mana_wpe_disable(struct wpa_ctrl *ctrl, int argc, cha
 static int hostapd_cli_cmd_mana_wpe_enable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
 	return wpa_ctrl_command(ctrl, "WPE_ENABLE");
 }
-static int hostapd_cli_cmd_mana_get_wpemode(struct wpe_ctrl *ctrl, int argc, char *argv[]) {
+static int hostapd_cli_cmd_mana_get_wpemode(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
 	return wpa_ctrl_command(ctrl, "WPE_MODE");
 }
 static int hostapd_cli_cmd_mana_eapsuccess_disable(struct wpa_ctrl *ctrl, int argc, char *argv[]) {
@@ -1849,7 +1849,7 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "mana_macacl_off", hostapd_cli_cmd_mana_macacl_disable, NULL, "= disable MAC ACLs at management frame level" },
 	{ "mana_macacl_on", hostapd_cli_cmd_mana_macacl_enable, NULL, "= enable MAC ACLs at management frame level" },
 	{ "mana_macacl_state", hostapd_cli_cmd_mana_get_aclmode, NULL, "= check ana's MAC ACL mode" },
-	{ "mana_wpe_off" hostapd_cli_cmd_mana_wpe_disable, NULL, "= disable mana's wpe mode" },
+	{ "mana_wpe_off", hostapd_cli_cmd_mana_wpe_disable, NULL, "= disable mana's wpe mode" },
 	{ "mana_wpe_on", hostapd_cli_cmd_mana_wpe_enable, NULL, "= enable mana's wpe mode" },
 	{ "mana_wpe_state", hostapd_cli_cmd_mana_get_wpemode, NULL, "= check mana's wpe mode" },
 	{ "mana_eapsuccess_off", hostapd_cli_cmd_mana_eapsuccess_disable, NULL, "= disable mana's eapsuccess mode" },
