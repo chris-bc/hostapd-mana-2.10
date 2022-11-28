@@ -221,6 +221,7 @@ struct sta_info {
 				* sa_query_count octets of pending SA Query
 				* transaction identifiers */
 	struct os_reltime sa_query_start;
+	struct hostapd_ssid *ssid_probe_mana; //MANA
 
 #if defined(CONFIG_INTERWORKING) || defined(CONFIG_DPP)
 #define GAS_DIALOG_MAX 8 /* Max concurrent dialog number */
