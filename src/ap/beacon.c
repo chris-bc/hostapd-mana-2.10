@@ -1294,12 +1294,12 @@ void handle_probe_req(struct hostapd_data *hapd,
 					 csa_offs[csa_offs_len++] =
 						 hapd->cs_c_off_proberesp;
 
-				 if (hapd->cs_c_off_ecsa_proberesep)
+				 if (hapd->cs_c_off_ecsa_proberesp)
 					 csa_offs[csa_offs_len++] =
 						 hapd->cs_c_off_ecsa_proberesp;
 			}
 
-			ret = hostapd_drv_send_mlme_csa(hapd, resp, resp_len, noack,
+			ret = hostapd_drv_send_mlme(hapd, resp, resp_len, noack,
 							csa_offs_len ? csa_offs : NULL,
 							csa_offs_len);
 			if (ret < 0)
