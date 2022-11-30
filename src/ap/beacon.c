@@ -1123,7 +1123,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 					HASH_ADD_STR(mana_ssidhash, ssid_txt, newssid);
 				else
 					HASH_ADD_STR(newsta->ssids, ssid_txt, newssid);
-			}
+			} else
+				wpa_printf(MSG_INFO, "MANA - SSID is '%s'",newssid);
 			wpa_printf(MSG_INFO, "MANA - Directed probe request for SSID '%s' from " MACSTR "",wpa_ssid_txt(elems.ssid, elems.ssid_len),MAC2STR(mgmt->sa));
 			log_ssid(hapd, elems.ssid, elems.ssid_len, mgmt->sa);
 		}
@@ -1223,7 +1224,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 		if (!hapd->iconf->enable_mana) //MANA if *not* mana, respond with the proper ssid
 			resp = hostapd_gen_probe_resp(hapd, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len, mgmt, elems.p2p != NULL, &resp_len);
 		else {
-			wpa_printf(MSG_DEBUG, "MANA - Attempting to generate response : %.*s (%d) for STA " MACSTR, elems.ssid_len, elems.ssid, elems.ssid_len, MAC2STR(mgmt->sa));
+			wpa_printf(MSG_INFO, "MANA - Attempting to generate response : %.*s (%d) for STA " MACSTR, elems.ssid_len, elems.ssid, elems.ssid_len, MAC2STR(mgmt->sa));
 			resp = hostapd_gen_probe_resp(hapd, elems.ssid, elems.ssid_len, mgmt, elems.p2p != NULL, &resp_len);
 		}
 		if (resp == NULL)

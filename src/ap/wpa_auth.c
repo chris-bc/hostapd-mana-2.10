@@ -1098,8 +1098,11 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			fwrite("\x48\x43\x50\x58",4,1,hccapx); //Signature
 			fwrite("\x04\x00\x00\x00",4,1,hccapx); //Version
 			fwrite("\x00",1,1,hccapx); //Message Pair (M1+M2)
-			fwrite(&wpa_auth->conf.ssid_len,1,1,hccapx);
-			fwrite(wpa_auth->conf.ssid,32,1,hccapx);
+			struct wpa_auth_config *conf = &wpa_auth->conf;
+			fwrite(&(conf->ssid_len),1,1,hccapx);
+			fwrite(conf->ssid,32,1,hccapx);
+			//fwrite(&((wpa_auth->conf).ssid_len),1,1,hccapx);
+			//fwrite((wpa_auth->conf).ssid,32,1,hccapx);
 			fwrite(&key->type,1,1,hccapx);
 			fwrite(mic_len == 24 ? mic : mic,16,1,hccapx); //hashcat truncates to 16
 			fwrite(sm->wpa_auth->addr,ETH_ALEN,1,hccapx);

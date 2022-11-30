@@ -1,9 +1,0 @@
-hostapd-2.6/hostapd/.config
-hostapd-2.6/hostapd/config_file.c
-hostapd-2.6/hostapd/ctrl_iface.c
-hostapd-2.6/hostapd/defconfig
-hostapd-2.6/hostapd/hostapd.accept
-hostapd-2.6/hostapd/hostapd_cli.c
-hostapd-2.6/hostapd/hostapd.conf
-hostapd-2.6/hostapd/main.c
-hostapd-2.6/hostapd/Makefile
