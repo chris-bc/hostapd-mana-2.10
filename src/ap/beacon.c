@@ -1364,8 +1364,8 @@ static u8 * hostapd_unsol_bcast_probe_resp(struct hostapd_data *hapd,
 	params->unsol_bcast_probe_resp_interval =
 		hapd->conf->unsol_bcast_probe_resp_interval;
 
-	return hostapd_gen_probe_resp(hapd, NULL, 0,
-				      &params->unsol_bcast_probe_resp_tmpl_len);
+	// return hostapd_gen_probe_resp(hapd, NULL, 0, &params->unsol_bcast_probe_resp_tmpl_len);
+	return hostapd_gen_probe_resp(hapd, NULL, 0, NULL, 0, &params->unsol_bcast_probe_resp_tmpl_len); // MANA
 }
 #endif /* CONFIG_IEEE80211AX */
 
